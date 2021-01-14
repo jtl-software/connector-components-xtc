@@ -46,11 +46,11 @@ abstract class AbstractBaseMapper
 
     /**
      * AbstractBaseMapper constructor.
-     * @param object $shopConfig
-     * @param object $connectorConfig
      * @param IDatabase $db
+     * @param $shopConfig
+     * @param $connectorConfig
      */
-    public function __construct($shopConfig, $connectorConfig, IDatabase $db)
+    public function __construct(IDatabase $db, $shopConfig, $connectorConfig)
     {
         $this->db = $db;
         $this->shopConfig = $shopConfig;
@@ -101,7 +101,7 @@ abstract class AbstractBaseMapper
                         throw new \Exception("Set method " . $setMethod . " does not exists");
                     }
 
-                    $subMapper = new $subMapperClass();
+                    $subMapper = new $subMapperClass($this->db, $this->shopConfig, $this->connectorConfig);
 
                     $values = $subMapper->pull($data);
 
@@ -184,7 +184,7 @@ abstract class AbstractBaseMapper
                         if (!class_exists($preSubMapperClass)) {
                             throw new \Exception("There is no mapper for " . $host);
                         } else {
-                            $preSubMapper = new $preSubMapperClass();
+                            $preSubMapper = new $preSubMapperClass($this->db, $this->shopConfig, $this->connectorConfig);
 
                             $values = $preSubMapper->push($obj, $dbObj);
 
@@ -286,7 +286,7 @@ abstract class AbstractBaseMapper
                 if (!class_exists($subMapperClass)) {
                     throw new \Exception("There is no mapper for " . $host);
                 } else {
-                    $subMapper = new $subMapperClass();
+                    $subMapper = new $subMapperClass($this->db, $this->shopConfig, $this->connectorConfig);
 
                     $values = $subMapper->push($obj);
 
@@ -509,7 +509,7 @@ abstract class AbstractBaseMapper
 
         return $name;
     }
-    
+
     /**
      * @param $endpointId
      * @param $table
