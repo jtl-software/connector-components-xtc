@@ -124,7 +124,10 @@ abstract class AbstractBaseMapper
                     $type = $this->type->getProperty($host)->getType();
 
                     if ($type == "DateTime" && !is_null($value)) {
-                        $value = ($value == '0000-00-00 00:00:00' || $value == null) ? null : new \DateTime($value);
+                        $value = new \DateTime($value);
+                        if ((int)$value->format("Y") <= 0){
+                            $value = null;
+                        }
                     } else {
                         settype($value, $type);
                     }
@@ -403,10 +406,7 @@ abstract class AbstractBaseMapper
             $result = $this->db->query($this->mapperConfig['query']);
             return count($result);
         } else {
-            $objs = $this->db->query(
-                "SELECT count(*) as count FROM {$this->mapperConfig['table']} LIMIT 1",
-                ["return" => "object"]
-            );
+            $objs = $this->db->query("SELECT count(*) as count FROM {$this->mapperConfig['table']} LIMIT 1", ["return" => "object"]);
         }
 
         return $objs !== null ? intval($objs[0]->count) : 0;
