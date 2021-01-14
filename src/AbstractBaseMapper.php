@@ -2,21 +2,20 @@
 
 namespace Jtl\Connector\XtcComponents;
 
-use jtl\Connector\Core\Database\Mysql;
+use jtl\Connector\Core\Database\IDatabase;
 use jtl\Connector\Core\Exception\LanguageException;
 use jtl\Connector\Model\DataModel;
 use jtl\Connector\Model\Identity;
-use jtl\Connector\Session\SessionHelper;
 use jtl\Connector\Core\Utilities\Language;
 
 /**
- * Class BaseMapper
+ * Class AbstractBaseMapper
  * @package Jtl\Connector\XtcComponents
  */
-abstract class BaseMapper
+abstract class AbstractBaseMapper
 {
     /**
-     * @var Mysql
+     * @var IDatabase
      */
     protected $db;
 
@@ -26,12 +25,12 @@ abstract class BaseMapper
     protected $mapperConfig;
 
     /**
-     * @var array
+     * @var object
      */
     protected $shopConfig;
 
     /**
-     * @var array
+     * @var object
      */
     protected $connectorConfig;
 
@@ -46,18 +45,17 @@ abstract class BaseMapper
     protected $model;
 
     /**
-     * BaseMapper constructor.
-     * @throws \jtl\Connector\Core\Exception\SessionException
+     * AbstractBaseMapper constructor.
+     * @param object $shopConfig
+     * @param object $connectorConfig
+     * @param IDatabase $db
      */
-    public function __construct()
+    public function __construct($shopConfig, $connectorConfig, IDatabase $db)
     {
-        $session = new SessionHelper(strtolower($this->getShopName()));
-        $reflect = new \ReflectionClass($this);
-
-        $this->db = Mysql::getInstance();
-        $this->shopConfig = $session->shopConfig;
-        $this->connectorConfig = $session->connectorConfig;
-        $this->model = "\\jtl\\Connector\\Model\\" . $reflect->getShortName();
+        $this->db = $db;
+        $this->shopConfig = $shopConfig;
+        $this->connectorConfig = $connectorConfig;
+        $this->model = sprintf("\\jtl\\Connector\\Model\\%s", (new \ReflectionClass($this))->getShortName());
         $this->type = null;
     }
 
@@ -69,14 +67,14 @@ abstract class BaseMapper
     /**
      * @return string
      */
-    abstract protected function getSubMapperNamespace(): string;
+    abstract protected function getMapperNamespace(): string;
 
     /**
-     * @param $data
+     * @param array $data
      * @return DataModel
      * @throws \Exception
      */
-    public function generateModel($data): DataModel
+    public function generateModel(array $data): DataModel
     {
         $model = new $this->model();
 
@@ -94,7 +92,7 @@ abstract class BaseMapper
             if ($this->type->getProperty($host)->isNavigation()) {
                 list($endpoint, $setMethod) = explode('|', $endpoint);
 
-                $subMapperClass = sprintf("\\%s\\%s", $this->getSubMapperNamespace(), $endpoint);
+                $subMapperClass = sprintf("\\%s\\%s", $this->getMapperNamespace(), $endpoint);
 
                 if (!class_exists($subMapperClass)) {
                     throw new \Exception("There is no mapper for " . $endpoint);
@@ -181,7 +179,7 @@ abstract class BaseMapper
                     list($preEndpoint, $preNavSetMethod, $preMapper) = array_pad(explode('|', $endpoint), 3, null);
 
                     if ($preMapper) {
-                        $preSubMapperClass = sprintf('\\%s\\%s', $this->getSubMapperNamespace(), $preEndpoint);
+                        $preSubMapperClass = sprintf('\\%s\\%s', $this->getMapperNamespace(), $preEndpoint);
 
                         if (!class_exists($preSubMapperClass)) {
                             throw new \Exception("There is no mapper for " . $host);
@@ -275,7 +273,7 @@ abstract class BaseMapper
                     }
                 }
             } else {
-                foreach ($dbObj as $key => $value) {
+                foreach (get_class_vars($dbObj) as $key => $value) {
                     $parentDbObj->$key = $value;
                 }
             }
@@ -283,7 +281,7 @@ abstract class BaseMapper
             foreach ($subMapper as $endpoint => $host) {
                 list($endpoint, $navSetMethod) = explode('|', $endpoint);
 
-                $subMapperClass = sprintf('\\%s\\%s', $this->getSubMapperNamespace(), $endpoint);
+                $subMapperClass = sprintf('\\%s\\%s', $this->getMapperNamespace(), $endpoint);
 
                 if (!class_exists($subMapperClass)) {
                     throw new \Exception("There is no mapper for " . $host);
@@ -368,7 +366,7 @@ abstract class BaseMapper
     /**
      * @param $data
      * @param null $dbObj
-     * @return array|multitype|unknown
+     * @return array|mixed
      * @throws \Exception
      */
     public function push($data, $dbObj = null)
@@ -406,7 +404,8 @@ abstract class BaseMapper
             return count($result);
         } else {
             $objs = $this->db->query(
-                "SELECT count(*) as count FROM {$this->mapperConfig['table']} LIMIT 1", ["return" => "object"]
+                "SELECT count(*) as count FROM {$this->mapperConfig['table']} LIMIT 1",
+                ["return" => "object"]
             );
         }
 
