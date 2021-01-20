@@ -125,7 +125,7 @@ abstract class AbstractBaseMapper
 
                     if ($type == "DateTime" && !is_null($value)) {
                         $value = new \DateTime($value);
-                        if ((int)$value->format("Y") <= 0){
+                        if ((int)$value->format("Y") <= 0) {
                             $value = null;
                         }
                     } else {
@@ -146,173 +146,158 @@ abstract class AbstractBaseMapper
     }
 
     /**
-     * @param $data
+     * @param $model
      * @param $parentDbObj
      * @param null $parentObj
      * @param false $addToParent
      * @return array|mixed
      * @throws \Exception
      */
-    public function generateDbObj($data, $parentDbObj, $parentObj = null, $addToParent = false)
+    public function generateDbObj(DataModel $model, $parentDbObj, $parentObj = null, $addToParent = false)
     {
-        $return = [];
-        if (!is_array($data)) {
-            $data = [$data];
+        $subMapper = [];
+
+        if (!$this->type) {
+            $this->type = $model->getModelType();
         }
 
-        foreach ($data as $obj) {
-            $subMapper = [];
+        $dbObj = new \stdClass();
 
-            $model = $obj;
+        foreach ($this->mapperConfig['mapPush'] as $endpoint => $host) {
+            if (is_null($host) && method_exists(get_class($this), $endpoint)) {
+                $value = $this->$endpoint($model);
+                if ($value instanceof \DateTimeInterface) {
+                    $value = $value->format("Y-m-d H:i:s");
+                }
+                $dbObj->$endpoint = $value;
+            } elseif ($this->type->getProperty($host)->isNavigation()) {
+                list($preEndpoint, $preNavSetMethod, $preMapper) = array_pad(explode('|', $endpoint), 3, null);
 
-            if (!$this->type) {
-                $this->type = $model->getModelType();
-            }
+                if ($preMapper) {
+                    $preSubMapperClass = sprintf('\\%s\\%s', $this->getMapperNamespace(), $preEndpoint);
 
-            $dbObj = new \stdClass();
+                    if (!class_exists($preSubMapperClass)) {
+                        throw new \Exception("There is no mapper for " . $host);
+                    } else {
+                        $preSubMapper = new $preSubMapperClass($this->db, $this->shopConfig, $this->connectorConfig);
 
-            foreach ($this->mapperConfig['mapPush'] as $endpoint => $host) {
-                if (is_null($host) && method_exists(get_class($this), $endpoint)) {
-                    $value = $this->$endpoint($obj, $model, $parentObj);
-                    if ($value instanceof \DateTimeInterface) {
-                        $value = $value->format("Y-m-d H:i:s");
-                    }
-                    $dbObj->$endpoint = $value;
-                } elseif ($this->type->getProperty($host)->isNavigation()) {
-                    list($preEndpoint, $preNavSetMethod, $preMapper) = array_pad(explode('|', $endpoint), 3, null);
+                            $values = $preSubMapper->push($model, $dbObj);
 
-                    if ($preMapper) {
-                        $preSubMapperClass = sprintf('\\%s\\%s', $this->getMapperNamespace(), $preEndpoint);
-
-                        if (!class_exists($preSubMapperClass)) {
-                            throw new \Exception("There is no mapper for " . $host);
-                        } else {
-                            $preSubMapper = new $preSubMapperClass($this->db, $this->shopConfig, $this->connectorConfig);
-
-                            $values = $preSubMapper->push($obj, $dbObj);
-
-                            if (!is_null($values) && is_array($values)) {
-                                foreach ($values as $setObj) {
-                                    $model->$preNavSetMethod($setObj);
-                                }
+                        if (!is_null($values) && is_array($values)) {
+                            foreach ($values as $setObj) {
+                                $model->$preNavSetMethod($setObj);
                             }
                         }
-                    } else {
-                        $subMapper[$endpoint] = $host;
                     }
                 } else {
-                    $value = null;
-
-                    $getMethod = 'get' . ucfirst($host);
-                    $setMethod = 'set' . ucfirst($host);
-
-                    if (isset($obj) && method_exists($obj, $getMethod)) {
-                        $value = $obj->$getMethod();
-                    } else {
-                        throw new \Exception("Cannot call get method '" . $getMethod . "' in entity '" . $this->model . "'");
-                    }
-
-                    if (isset($value)) {
-                        if ($this->type->getProperty($host)->isIdentity()) {
-                            $model->$setMethod($value);
-
-                            $idVal = $value->getEndpoint();
-
-                            if (!empty($idVal)) {
-                                $value = $idVal;
-                            }
-                        } else {
-                            $type = $this->type->getProperty($host)->getType();
-                            if ($type == "DateTime") {
-                                $value = $value->format('Y-m-d H:i:s');
-                            } elseif ($type == "boolean") {
-                                settype($value, "integer");
-                            }
-                        }
-
-                        $dbObj->$endpoint = $value;
-                    }
-                }
-            }
-
-            if (!$addToParent) {
-                $whereKey = null;
-                $whereValue = null;
-
-                if (isset($this->mapperConfig['where'])) {
-                    $whereKey = $this->mapperConfig['where'];
-
-                    if (is_array($whereKey)) {
-                        $whereValue = [];
-                        foreach ($whereKey as $key) {
-                            $whereValue[] = $dbObj->{$key};
-                        }
-                    } else {
-                        $whereValue = $dbObj->{$whereKey};
-                    }
-                }
-
-                $checkEmpty = get_object_vars($dbObj);
-
-                if (!empty($checkEmpty)) {
-                    if (isset($this->mapperConfig['identity'])) {
-                        $currentId = $obj->{$this->mapperConfig['identity']}()->getEndpoint();
-                    }
-
-                    if (!empty($currentId)) {
-                        $insertResult = $this->db->updateRow($dbObj, $this->mapperConfig['table'], $whereKey, $whereValue);
-
-                        $insertResult->setKey($currentId);
-                    } else {
-                        if (isset($this->mapperConfig['where'])) {
-                            unset($dbObj->{$this->mapperConfig['where']});
-                        }
-
-                        $insertResult = $this->db->deleteInsertRow($dbObj, $this->mapperConfig['table'], $whereKey, $whereValue);
-                    }
-
-                    if (isset($this->mapperConfig['identity'])) {
-                        $obj->{$this->mapperConfig['identity']}()->setEndpoint($insertResult->getKey());
-                    }
+                    $subMapper[$endpoint] = $host;
                 }
             } else {
-                foreach (get_class_vars($dbObj) as $key => $value) {
-                    $parentDbObj->$key = $value;
+                $value = null;
+
+                $getMethod = 'get' . ucfirst($host);
+                $setMethod = 'set' . ucfirst($host);
+
+                if (isset($model) && method_exists($model, $getMethod)) {
+                    $value = $model->$getMethod();
+                } else {
+                    throw new \Exception("Cannot call get method '" . $getMethod . "' in entity '" . $this->model . "'");
+                }
+
+                if (isset($value)) {
+                    if ($this->type->getProperty($host)->isIdentity()) {
+                        $model->$setMethod($value);
+
+                        $idVal = $value->getEndpoint();
+
+                        if (!empty($idVal)) {
+                            $value = $idVal;
+                        }
+                    } else {
+                        $type = $this->type->getProperty($host)->getType();
+                        if ($type == "DateTime") {
+                            $value = $value->format('Y-m-d H:i:s');
+                        } elseif ($type == "boolean") {
+                            settype($value, "integer");
+                        }
+                    }
+
+                    $dbObj->$endpoint = $value;
+                }
+            }
+        }
+
+        if (!$addToParent) {
+            $whereKey = null;
+            $whereValue = null;
+
+            if (isset($this->mapperConfig['where'])) {
+                $whereKey = $this->mapperConfig['where'];
+
+                if (is_array($whereKey)) {
+                    $whereValue = [];
+                    foreach ($whereKey as $key) {
+                        $whereValue[] = $dbObj->{$key};
+                    }
+                } else {
+                    $whereValue = $dbObj->{$whereKey};
                 }
             }
 
-            foreach ($subMapper as $endpoint => $host) {
-                list($endpoint, $navSetMethod) = explode('|', $endpoint);
+            $checkEmpty = get_object_vars($dbObj);
 
-                $subMapperClass = sprintf('\\%s\\%s', $this->getMapperNamespace(), $endpoint);
+            if (!empty($checkEmpty)) {
+                if (isset($this->mapperConfig['identity'])) {
+                    $currentId = $model->{$this->mapperConfig['identity']}()->getEndpoint();
+                }
 
-                if (!class_exists($subMapperClass)) {
-                    throw new \Exception("There is no mapper for " . $host);
+                if (!empty($currentId)) {
+                    $insertResult = $this->db->updateRow($dbObj, $this->mapperConfig['table'], $whereKey, $whereValue);
+
+                    $insertResult->setKey($currentId);
                 } else {
-                    $subMapper = new $subMapperClass($this->db, $this->shopConfig, $this->connectorConfig);
+                    if (isset($this->mapperConfig['where'])) {
+                        unset($dbObj->{$this->mapperConfig['where']});
+                    }
 
-                    $values = $subMapper->push($obj);
+                    $insertResult = $this->db->deleteInsertRow($dbObj, $this->mapperConfig['table'], $whereKey, $whereValue);
+                }
 
-                    if (!is_null($values) && is_array($values)) {
-                        foreach ($values as $setObj) {
-                            $model->$navSetMethod($setObj);
-                        }
+                if (isset($this->mapperConfig['identity'])) {
+                    $model->{$this->mapperConfig['identity']}()->setEndpoint($insertResult->getKey());
+                }
+            }
+        } else {
+            foreach (get_class_vars($dbObj) as $key => $value) {
+                $parentDbObj->$key = $value;
+            }
+        }
+
+        foreach ($subMapper as $endpoint => $host) {
+            list($endpoint, $navSetMethod) = explode('|', $endpoint);
+
+            $subMapperClass = sprintf('\\%s\\%s', $this->getMapperNamespace(), $endpoint);
+
+            if (!class_exists($subMapperClass)) {
+                throw new \Exception("There is no mapper for " . $host);
+            } else {
+                $subMapper = new $subMapperClass($this->db, $this->shopConfig, $this->connectorConfig);
+
+                $values = $subMapper->push($model);
+
+                if (!is_null($values) && is_array($values)) {
+                    foreach ($values as $setObj) {
+                        $model->$navSetMethod($setObj);
                     }
                 }
             }
-
-            if (method_exists(get_class($this), 'pushDone')) {
-                $this->pushDone($model, $dbObj, $obj);
-            }
-
-            $return[] = $model;
         }
 
-        if (is_null($parentObj)) {
-            return count($return) > 1 ? $return : $return[0];
-        } else {
-            return is_array($data) ? $return : $return[0];
+        if (method_exists(get_class($this), 'pushDone')) {
+            $this->pushDone($model, $dbObj, $model);
         }
+
+        return $model;
     }
 
     /**
