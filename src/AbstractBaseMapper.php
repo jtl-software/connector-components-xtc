@@ -148,12 +148,12 @@ abstract class AbstractBaseMapper
     /**
      * @param $model
      * @param $parentDbObj
-     * @param null $parentObj
+     * @param null $parentModel
      * @param false $addToParent
      * @return array|mixed
      * @throws \Exception
      */
-    public function generateDbObj(DataModel $model, $parentDbObj, $parentObj = null, $addToParent = false)
+    public function generateDbObj(DataModel $model, $parentDbObj, DataModel $parentModel = null, $addToParent = false)
     {
         $subMapper = [];
 
@@ -165,7 +165,7 @@ abstract class AbstractBaseMapper
 
         foreach ($this->mapperConfig['mapPush'] as $endpoint => $host) {
             if (is_null($host) && method_exists(get_class($this), $endpoint)) {
-                $value = $this->$endpoint($model);
+                $value = $this->$endpoint($model, $parentDbObj, $parentModel);
                 if ($value instanceof \DateTimeInterface) {
                     $value = $value->format("Y-m-d H:i:s");
                 }
