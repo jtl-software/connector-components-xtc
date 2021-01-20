@@ -181,7 +181,7 @@ abstract class AbstractBaseMapper
                     } else {
                         $preSubMapper = new $preSubMapperClass($this->db, $this->shopConfig, $this->connectorConfig);
 
-                            $values = $preSubMapper->push($model, $dbObj);
+                        $values = $preSubMapper->push($model, $dbObj);
 
                         if (!is_null($values) && is_array($values)) {
                             foreach ($values as $setObj) {
@@ -352,24 +352,21 @@ abstract class AbstractBaseMapper
     }
 
     /**
-     * @param $data
+     * @param $model
      * @param null $dbObj
      * @return array|mixed
      * @throws \Exception
      */
-    public function push($data, $dbObj = null)
+    public function push($model, $dbObj = null)
     {
-        $parent = null;
-
         if (isset($this->mapperConfig['getMethod'])) {
-            $subGetMethod = $this->mapperConfig['getMethod'];
-            $parent = $data;
-            $data = $data->$subGetMethod();
+            $childrenGetter = $this->mapperConfig['getMethod'];
+            return array_map(function (DataModel $childModel) use ($dbObj, $model) {
+                return $this->generateDbObj($childModel, $dbObj, $model);
+            }, $model->$childrenGetter());
         }
 
-        $return = $this->generateDbObj($data, $dbObj, $parent);
-
-        return $return;
+        return $this->generateDbObj($model, $dbObj);
     }
 
     /**
