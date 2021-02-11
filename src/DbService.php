@@ -40,8 +40,8 @@ class DbService
      */
     public function insert(string $table, array $row): void
     {
-        $columns = '`' . implode('`,', array_keys($row)) . '`';
-        $values = implode('\',', implode(array_fill(0, count($row), '?')));
+        $columns = '`' . implode('`,`', array_keys($row)) . '`';
+        $values = implode(',', array_fill(0, count($row), '?'));
         $sql = sprintf('INSERT INTO `%s` (%s) VALUES (%s)', $table, $columns, $values);
 
         $statement = $this->prepare($sql);
@@ -60,7 +60,7 @@ class DbService
     {
         $set = [];
         foreach($row as $column => $value) {
-            $set[] = sprintf('`%s` = ?');
+            $set[] = sprintf('`%s` = ?', $column);
         }
 
         $wheres = [];
@@ -72,10 +72,10 @@ class DbService
             $wheres[] = '1';
         }
 
-        $sql = sprintf('UPDATE `%s` SET %s WHERE %s', $table, implode(',', $set), implode(' AND ', $wheres));
+        $sql = sprintf('UPDATE `%s` SET %s WHERE %s', $table, implode(', ', $set), implode(' AND ', $wheres));
 
         $stmt = $this->prepare($sql);
-        $this->bindParams($stmt, array_merge($set, $wheres));
+        $this->bindParams($stmt, array_merge(array_values($row), array_values($identifier)));
         $stmt->execute();
 
         return $stmt->rowCount();
@@ -83,21 +83,25 @@ class DbService
 
     /**
      * @param string $table
-     * @param array $row
-     * @param array $identifier
+     * @param array<mixed> $row
+     * @param array<mixed> $identifier
      */
     public function upsert(string $table, array $row, array $identifier): void
     {
         try {
             $this->insert($table, $row);
         } catch (\PDOException $ex) {
+            if($ex->errorInfo[1] !== 1062) {
+                throw $ex;
+            }
+
             $this->update($table, $row, $identifier);
         }
     }
 
     /**
      * @param string $table
-     * @param array $identifier
+     * @param array<mixed> $identifier
      * @return integer
      */
     public function delete(string $table, array $identifier): int
@@ -121,8 +125,8 @@ class DbService
 
     /**
      * @param string $table
-     * @param array $identifier
-     * @param array $row
+     * @param array<mixed> $identifier
+     * @param array<mixed> $row
      */
     public function deleteInsert(string $table, array $row, array $identifier)
     {
@@ -142,11 +146,11 @@ class DbService
             foreach ($rows as $row) {
                 $this->insert($table, $row);
             }
+            $this->commit();
         } catch (\Throwable $ex) {
             $this->rollBack();
             throw $ex;
         }
-        $this->commit();
     }
 
     /**
@@ -170,12 +174,12 @@ class DbService
                     break;
                 case 'object':
                     if ($value instanceof \DateTimeInterface) {
-                        $value = $value->format(\DateTimeInterface::ATOM);
+                        $value = $value->format('Y-m-d H:i:s');
                     }
                     break;
             }
 
-            $statement->bindParam($index + 1, $value, $paramType);
+            $statement->bindValue($index + 1, $value, $paramType);
         }
     }
 
@@ -204,6 +208,9 @@ class DbService
     {
         //$dbOptions[PDO::MYSQL_ATTR_INIT_COMMAND] = 'SET NAMES \'UTF8\'';
         $dsn = sprintf('mysql:dbname=%s;host=%s', $dbName, $dbHost);
-        return new \PDO($dsn, $dbUser, $dbPassword, $dbOptions);
+
+        $pdo = new \PDO($dsn, $dbUser, $dbPassword, $dbOptions);
+        $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+        return $pdo;
     }
 }
