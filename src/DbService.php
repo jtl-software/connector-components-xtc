@@ -3,6 +3,12 @@
 
 namespace Jtl\Connector\XtcComponents;
 
+/**
+ * Class DbService
+ * @package Jtl\Connector\XtcComponents
+ *
+ * @mixin \PDO
+ */
 class DbService
 {
     /**
@@ -30,22 +36,126 @@ class DbService
     /**
      * @param string $table
      * @param array $row
-     * @return int
+     * @return void
      */
-    public function insert(string $table, array $row): int
+    public function insert(string $table, array $row): void
     {
         $columns = '`' . implode('`,', array_keys($row)) . '`';
         $values = implode('\',', implode(array_fill(0, count($row), '?')));
-        $sql = sprintf('INSERT INTO `%s` (%s) VALUES (%s)', $columns, $values);
+        $sql = sprintf('INSERT INTO `%s` (%s) VALUES (%s)', $table, $columns, $values);
 
-        $statement = $this->pdo->prepare($sql);
+        $statement = $this->prepare($sql);
+        $this->bindParams($statement, $row);
 
-        $this->prepareDatabaseValues($statement, $row);
+        $statement->execute();
     }
 
-    protected function prepareDatabaseValues(\PDOStatement $statement, array $row): array
+    /**
+     * @param string $table
+     * @param array $row
+     * @param array $identifier
+     * @return integer
+     */
+    public function update(string $table, array $row, array $identifier): int
     {
-        $prepared = [];
+        $set = [];
+        foreach($row as $column => $value) {
+            $set[] = sprintf('`%s` = ?');
+        }
+
+        $wheres = [];
+        foreach($identifier as $column => $value) {
+            $wheres[] = sprintf('`%s` = ?', $column);
+        }
+
+        if(count($wheres) === 0) {
+            $wheres[] = '1';
+        }
+
+        $sql = sprintf('UPDATE `%s` SET %s WHERE %s', $table, implode(',', $set), implode(' AND ', $wheres));
+
+        $stmt = $this->prepare($sql);
+        $this->bindParams($stmt, array_merge($set, $wheres));
+        $stmt->execute();
+
+        return $stmt->rowCount();
+    }
+
+    /**
+     * @param string $table
+     * @param array $row
+     * @param array $identifier
+     */
+    public function upsert(string $table, array $row, array $identifier): void
+    {
+        try {
+            $this->insert($table, $row);
+        } catch (\PDOException $ex) {
+            $this->update($table, $row, $identifier);
+        }
+    }
+
+    /**
+     * @param string $table
+     * @param array $identifier
+     * @return integer
+     */
+    public function delete(string $table, array $identifier): int
+    {
+        $wheres = [];
+        foreach($identifier as $column => $value) {
+            $wheres[] = sprintf('`%s` = ?', $column);
+        }
+
+        if(count($wheres) === 0) {
+            $wheres[] = '1';
+        }
+
+        $sql = sprintf('DELETE FROM `%s` WHERE %s', $table, implode(' AND ', $wheres));
+        $stmt = $this->prepare($sql);
+
+        $this->bindParams($stmt, $identifier);
+        $stmt->execute();
+        return $stmt->rowCount();
+    }
+
+    /**
+     * @param string $table
+     * @param array $identifier
+     * @param array $row
+     */
+    public function deleteInsert(string $table, array $row, array $identifier)
+    {
+        $this->delete($table, $identifier);
+        $this->insert($table, $row);
+    }
+
+    /**
+     * @param $table
+     * @param array $rows
+     * @throws \Throwable
+     */
+    public function multiInsert($table, array $rows): void
+    {
+        $this->beginTransaction();
+        try {
+            foreach ($rows as $row) {
+                $this->insert($table, $row);
+            }
+        } catch (\Throwable $ex) {
+            $this->rollBack();
+            throw $ex;
+        }
+        $this->commit();
+    }
+
+    /**
+     * @param \PDOStatement $statement
+     * @param array<mixed> $row
+     * @return void
+     */
+    protected function bindParams(\PDOStatement $statement, array $row): void
+    {
         foreach (array_values($row) as $index => $value) {
             $paramType = \PDO::PARAM_STR;
             switch (gettype($value)) {
@@ -65,71 +175,8 @@ class DbService
                     break;
             }
 
-            $statement->bindParam($index, $value, $paramType);
+            $statement->bindParam($index + 1, $value, $paramType);
         }
-    }
-
-    /**
-     * @param string $table
-     * @param array $identifiers
-     * @param array $row
-     * @return int
-     *
-     */
-    public function update(string $table, array $identifiers, array $row): int
-    {
-    }
-
-    /**
-     * @param string $table
-     * @param array $identifiers
-     * @param array $row
-     */
-    public function upsert(string $table, array $identifiers, array $row): void
-    {
-        try {
-            $this->insert($table, $row);
-        } catch (\PDOException $ex) {
-            $this->update($table, $identifiers, $row);
-        }
-    }
-
-    /**
-     * @param string $table
-     * @param array $identifiers
-     */
-    public function delete(string $table, array $identifiers)
-    {
-    }
-
-    /**
-     * @param string $table
-     * @param array $identifiers
-     * @param array $row
-     */
-    public function deleteInsert(string $table, array $identifiers, array $row)
-    {
-        $this->delete($table, $identifiers);
-        $this->insert($table, $row);
-    }
-
-    /**
-     * @param $table
-     * @param array $rows
-     * @throws \Throwable
-     */
-    public function multiInsert($table, array $rows): void
-    {
-        $this->pdo->beginTransaction();
-        try {
-            foreach ($rows as $row) {
-                $this->insert($table, $row);
-            }
-        } catch (\Throwable $ex) {
-            $this->pdo->rollBack();
-            throw $ex;
-        }
-        $this->pdo->commit();
     }
 
     /**
