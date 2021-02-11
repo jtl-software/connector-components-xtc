@@ -12,37 +12,22 @@ use jtl\Connector\Core\Utilities\Language;
  * Class AbstractBaseMapper
  * @package Jtl\Connector\XtcComponents
  */
-abstract class AbstractBaseMapper
+abstract class AbstractBaseMapper extends AbstractBase
 {
-    /**
-     * @var IDatabase
-     */
-    protected $db;
-
     /**
      * @var array
      */
     protected $mapperConfig;
 
     /**
-     * @var object
+     * @var string
      */
-    protected $shopConfig;
-
-    /**
-     * @var object
-     */
-    protected $connectorConfig;
+    protected $model;
 
     /**
      * @var null
      */
     protected $type;
-
-    /**
-     * @var string
-     */
-    protected $model;
 
     /**
      * AbstractBaseMapper constructor.
@@ -52,9 +37,7 @@ abstract class AbstractBaseMapper
      */
     public function __construct(IDatabase $db, $shopConfig, $connectorConfig)
     {
-        $this->db = $db;
-        $this->shopConfig = $shopConfig;
-        $this->connectorConfig = $connectorConfig;
+        parent::__construct($db, $shopConfig, $connectorConfig);
         $this->model = sprintf("\\jtl\\Connector\\Model\\%s", (new \ReflectionClass($this))->getShortName());
         $this->type = null;
     }

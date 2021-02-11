@@ -13,40 +13,12 @@ use jtl\Connector\Result\Action;
  * Class AbstractBaseController
  * @package Jtl\Connector\XtcComponents
  */
-abstract class AbstractBaseController implements IController
+abstract class AbstractBaseController extends AbstractBase implements IController
 {
-    /**
-     * @var IDatabase
-     */
-    protected $db;
-
-    /**
-     * @var object
-     */
-    protected $shopConfig;
-
-    /**
-     * @var object
-     */
-    protected $connectorConfig;
-
     /**
      * @var object
      */
     protected $method;
-
-    /**
-     * AbstractBaseController constructor.
-     * @param IDatabase $db
-     * @param object $shopConfig
-     * @param object $connectorConfig
-     */
-    public function __construct(IDatabase $db, $shopConfig, $connectorConfig)
-    {
-        $this->db = $db;
-        $this->shopConfig = $shopConfig;
-        $this->connectorConfig = $connectorConfig;
-    }
 
     /**
      * @param DataModel $model

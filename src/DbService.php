@@ -144,4 +144,19 @@ class DbService
         }
         throw new \BadMethodCallException(sprintf('Method with name %s does not exist.', $name));
     }
+
+    /**
+     * @param string $dbHost
+     * @param string $dbName
+     * @param string $dbUser
+     * @param string $dbPassword
+     * @param array $dbOptions
+     * @return \PDO
+     */
+    public function createPDO(string $dbHost, string $dbName, string $dbUser, string $dbPassword, array $dbOptions = []): \PDO
+    {
+        //$dbOptions[PDO::MYSQL_ATTR_INIT_COMMAND] = 'SET NAMES \'UTF8\'';
+        $dsn = sprintf('mysql:dbname=%s;host=%s', $dbName, $dbHost);
+        return new \PDO($dsn, $dbUser, $dbPassword, $dbOptions);
+    }
 }
