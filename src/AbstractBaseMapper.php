@@ -34,9 +34,9 @@ abstract class AbstractBaseMapper extends AbstractBase
      * AbstractBaseMapper constructor.
      * @param IDatabase $db
      * @param array $shopConfig
-     * @param Config $connectorConfig
+     * @param \stdClass $connectorConfig
      */
-    public function __construct(IDatabase $db, array $shopConfig, Config $connectorConfig)
+    public function __construct(IDatabase $db, array $shopConfig, \stdClass $connectorConfig)
     {
         parent::__construct($db, $shopConfig, $connectorConfig);
         $this->model = sprintf("\\jtl\\Connector\\Model\\%s", (new \ReflectionClass($this))->getShortName());
@@ -47,11 +47,6 @@ abstract class AbstractBaseMapper extends AbstractBase
      * @return string
      */
     abstract protected function getShopName(): string;
-
-    /**
-     * @return string
-     */
-    abstract protected function getMapperNamespace(): string;
 
     /**
      * @param array $data
