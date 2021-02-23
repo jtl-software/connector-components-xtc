@@ -59,16 +59,16 @@ class DbService
     public function update(string $table, array $row, array $identifier): int
     {
         $set = [];
-        foreach($row as $column => $value) {
+        foreach ($row as $column => $value) {
             $set[] = sprintf('`%s` = ?', $column);
         }
 
         $wheres = [];
-        foreach($identifier as $column => $value) {
+        foreach ($identifier as $column => $value) {
             $wheres[] = sprintf('`%s` = ?', $column);
         }
 
-        if(count($wheres) === 0) {
+        if (count($wheres) === 0) {
             $wheres[] = '1';
         }
 
@@ -91,7 +91,7 @@ class DbService
         try {
             $this->insert($table, $row);
         } catch (\PDOException $ex) {
-            if($ex->errorInfo[1] !== 1062) {
+            if ($ex->errorInfo[1] !== 1062) {
                 throw $ex;
             }
 
@@ -107,11 +107,11 @@ class DbService
     public function delete(string $table, array $identifier): int
     {
         $wheres = [];
-        foreach($identifier as $column => $value) {
+        foreach ($identifier as $column => $value) {
             $wheres[] = sprintf('`%s` = ?', $column);
         }
 
-        if(count($wheres) === 0) {
+        if (count($wheres) === 0) {
             $wheres[] = '1';
         }
 
@@ -204,7 +204,7 @@ class DbService
      * @param array $dbOptions
      * @return \PDO
      */
-    public function createPDO(string $dbHost, string $dbName, string $dbUser, string $dbPassword, array $dbOptions = []): \PDO
+    public static function createPDO(string $dbHost, string $dbName, string $dbUser, string $dbPassword, array $dbOptions = []): \PDO
     {
         //$dbOptions[PDO::MYSQL_ATTR_INIT_COMMAND] = 'SET NAMES \'UTF8\'';
         $dsn = sprintf('mysql:dbname=%s;host=%s', $dbName, $dbHost);

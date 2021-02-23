@@ -3,8 +3,8 @@
 
 namespace Jtl\Connector\XtcComponents;
 
-
 use jtl\Connector\Core\Database\IDatabase;
+use jtl\Connector\Modified\Installer\Config;
 
 abstract class AbstractBase
 {
@@ -19,7 +19,7 @@ abstract class AbstractBase
     protected $dbService;
 
     /**
-     * @var object
+     * @var array
      */
     protected $shopConfig;
 
@@ -31,10 +31,10 @@ abstract class AbstractBase
     /**
      * AbstractBase constructor.
      * @param IDatabase $db
-     * @param $shopConfig
-     * @param $connectorConfig
+     * @param array $shopConfig
+     * @param Config $connectorConfig
      */
-    public function __construct(IDatabase $db, $shopConfig, $connectorConfig)
+    public function __construct(IDatabase $db, array $shopConfig, Config $connectorConfig)
     {
         $this->db = $db;
         $this->dbService = new DbService(DbService::createPDO($shopConfig['db']["host"], $shopConfig['db']["name"], $shopConfig['db']["user"], $shopConfig['db']["pass"]));

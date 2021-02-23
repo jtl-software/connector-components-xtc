@@ -7,6 +7,7 @@ use jtl\Connector\Core\Exception\LanguageException;
 use jtl\Connector\Model\DataModel;
 use jtl\Connector\Model\Identity;
 use jtl\Connector\Core\Utilities\Language;
+use jtl\Connector\Modified\Installer\Config;
 
 /**
  * Class AbstractBaseMapper
@@ -32,10 +33,10 @@ abstract class AbstractBaseMapper extends AbstractBase
     /**
      * AbstractBaseMapper constructor.
      * @param IDatabase $db
-     * @param $shopConfig
-     * @param $connectorConfig
+     * @param array $shopConfig
+     * @param Config $connectorConfig
      */
-    public function __construct(IDatabase $db, $shopConfig, $connectorConfig)
+    public function __construct(IDatabase $db, array $shopConfig, Config $connectorConfig)
     {
         parent::__construct($db, $shopConfig, $connectorConfig);
         $this->model = sprintf("\\jtl\\Connector\\Model\\%s", (new \ReflectionClass($this))->getShortName());
@@ -181,7 +182,7 @@ abstract class AbstractBaseMapper extends AbstractBase
                 $getMethod = 'get' . ucfirst($host);
                 $setMethod = 'set' . ucfirst($host);
 
-                if (isset($model) && method_exists($model, $getMethod)) {
+                if (method_exists($model, $getMethod)) {
                     $value = $model->$getMethod();
                 } else {
                     throw new \Exception("Cannot call get method '" . $getMethod . "' in entity '" . $this->model . "'");
