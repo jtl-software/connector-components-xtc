@@ -36,11 +36,18 @@ abstract class AbstractBaseController extends AbstractBase implements IControlle
      * @param \stdClass $connectorConfig
      * @throws \Exception
      */
-    public function __construct(IDatabase $db, array $shopConfig, \stdClass $connectorConfig, string $controllerName)
+    public function __construct(IDatabase $db, array $shopConfig, \stdClass $connectorConfig)
     {
         parent::__construct($db, $shopConfig, $connectorConfig);
-        $this->controllerName = $controllerName;
-        $this->mapper = $this->createMapper($this->controllerName);
+        $this->mapper = $this->createMapper($this->getControllerName());
+    }
+
+    /**
+     * @return string
+     */
+    public function getControllerName(): string
+    {
+        return (new \ReflectionClass($this))->getShortName();
     }
 
     /**
@@ -76,16 +83,16 @@ abstract class AbstractBaseController extends AbstractBase implements IControlle
     }
 
     /**
-     * @param QueryFilter $queryfilter
+     * @param QueryFilter $queryFilter
      * @return Action
      */
-    public function pull(QueryFilter $queryfilter)
+    public function pull(QueryFilter $queryFilter)
     {
         $action = new Action();
         $action->setHandled(true);
 
         try {
-            $result = $this->mapper->pull(null, $queryfilter->getLimit());
+            $result = $this->mapper->pull(null, $queryFilter->getLimit());
 
             $action->setResult($result);
         } catch (\Exception $exc) {
@@ -104,7 +111,7 @@ abstract class AbstractBaseController extends AbstractBase implements IControlle
      * @param DataModel $model
      * @return Action
      */
-    public function delete(DataModel $model)
+    public function delete(DataModel $model): Action
     {
         $action = new Action();
 
@@ -127,10 +134,10 @@ abstract class AbstractBaseController extends AbstractBase implements IControlle
     }
 
     /**
-     * @param QueryFilter $filter
+     * @param QueryFilter $queryFilter
      * @return Action
      */
-    public function statistic(QueryFilter $filter)
+    public function statistic(QueryFilter $queryFilter): Action
     {
         $action = new Action();
         $action->setHandled(true);
@@ -157,7 +164,7 @@ abstract class AbstractBaseController extends AbstractBase implements IControlle
      * @param DataModel $model
      * @return Action
      */
-    public function push(DataModel $model)
+    public function push(DataModel $model): Action
     {
         $action = new Action();
 

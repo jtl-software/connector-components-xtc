@@ -7,7 +7,6 @@ use jtl\Connector\Core\Exception\LanguageException;
 use jtl\Connector\Model\DataModel;
 use jtl\Connector\Model\Identity;
 use jtl\Connector\Core\Utilities\Language;
-use jtl\Connector\Modified\Installer\Config;
 
 /**
  * Class AbstractBaseMapper
@@ -57,7 +56,7 @@ abstract class AbstractBaseMapper extends AbstractBase
     {
         $model = new $this->model();
 
-        if (!$this->type) {
+        if (is_null($this->type)) {
             $this->type = $model->getModelType();
         }
 
@@ -125,18 +124,18 @@ abstract class AbstractBaseMapper extends AbstractBase
     }
 
     /**
-     * @param $model
-     * @param $parentDbObj
-     * @param null $parentModel
+     * @param DataModel $model
+     * @param \stdClass $parentDbObj
+     * @param DataModel|null $parentModel
      * @param false $addToParent
-     * @return array|mixed
+     * @return DataModel
      * @throws \Exception
      */
-    public function generateDbObj(DataModel $model, $parentDbObj, DataModel $parentModel = null, $addToParent = false)
+    public function generateDbObj(DataModel $model, \stdClass $parentDbObj, DataModel $parentModel = null, $addToParent = false)
     {
         $subMapper = [];
 
-        if (!$this->type) {
+        if (is_null($this->type)) {
             $this->type = $model->getModelType();
         }
 
@@ -273,7 +272,7 @@ abstract class AbstractBaseMapper extends AbstractBase
         }
 
         if (method_exists(get_class($this), 'pushDone')) {
-            $this->pushDone($model, $dbObj, $model);
+            $this->pushDone($model, $dbObj);
         }
 
         return $model;
@@ -285,7 +284,7 @@ abstract class AbstractBaseMapper extends AbstractBase
      * @return array
      * @throws \Exception
      */
-    public function pull($parentData = null, $limit = null)
+    public function pull($parentData = null, $limit = null): array
     {
         $dbResult = $this->executeQuery($parentData, $limit);
 
@@ -302,12 +301,12 @@ abstract class AbstractBaseMapper extends AbstractBase
 
     /**
      * @param null $parentData
-     * @param null $limit
-     * @return array|bool|\jtl\Connector\Core\Database\multitype|number|null
+     * @param int|null $limit
+     * @return mixed
      */
-    protected function executeQuery($parentData = null, $limit = null)
+    protected function executeQuery($parentData = null, ?int $limit = null)
     {
-        $limitQuery = isset($limit) ? ' LIMIT ' . $limit : '';
+        $limitQuery = is_null($limit) ? ' LIMIT ' . $limit : '';
 
         if (isset($this->mapperConfig['query'])) {
             if (!is_null($parentData)) {
@@ -331,12 +330,12 @@ abstract class AbstractBaseMapper extends AbstractBase
     }
 
     /**
-     * @param $model
-     * @param null $dbObj
-     * @return array|mixed
+     * @param DataModel $model
+     * @param \stdClass|null $dbObj
+     * @return array|array[]|DataModel|DataModel[]|mixed
      * @throws \Exception
      */
-    public function push($model, $dbObj = null)
+    public function push(DataModel $model, \stdClass $dbObj = null)
     {
         if (isset($this->mapperConfig['getMethod'])) {
             $childrenGetter = $this->mapperConfig['getMethod'];
@@ -349,16 +348,16 @@ abstract class AbstractBaseMapper extends AbstractBase
     }
 
     /**
-     * @param $data
+     * @param DataModel $data
      */
-    public function delete($data)
+    public function delete(DataModel $data)
     {
     }
 
     /**
      * @return int
      */
-    public function statistic()
+    public function statistic(): int
     {
         if (isset($this->mapperConfig['statisticsQuery'])) {
             $result = $this->db->query($this->mapperConfig['statisticsQuery']);
@@ -367,78 +366,68 @@ abstract class AbstractBaseMapper extends AbstractBase
             $result = $this->db->query($this->mapperConfig['query']);
             return count($result);
         } else {
-            $objs = $this->db->query("SELECT count(*) as count FROM {$this->mapperConfig['table']} LIMIT 1", ["return" => "object"]);
+            $objs = $this->db->query("SELECT count(*) as count FROM {$this->mapperConfig['table']} LIMIT 1");
         }
 
         return $objs !== null ? intval($objs[0]->count) : 0;
     }
 
     /**
-     * @param $country
+     * @param string $country
      * @return false|int|string|null
      * @throws LanguageException
      */
-    public function fullLocale($country)
+    public function fullLocale(string $country)
     {
-        if (isset($country)) {
-            return Language::convert($country);
-        }
+        return Language::convert($country);
     }
 
     /**
-     * @param $locale
+     * @param string $locale
      * @return mixed
      * @throws LanguageException
      */
-    public function locale2id($locale)
+    public function locale2id(string $locale)
     {
-        if (isset($locale)) {
-            $iso2 = Language::convert(null, $locale);
-            $dbResult = $this->db->query('SELECT languages_id FROM languages WHERE code="' . $iso2 . '"');
+        $iso2 = Language::convert(null, $locale);
+        $dbResult = $this->db->query('SELECT languages_id FROM languages WHERE code="' . $iso2 . '"');
 
-            return $dbResult[0]['languages_id'];
-        }
+        return $dbResult[0]['languages_id'];
     }
 
     /**
-     * @param $id
+     * @param int $id
      * @return false|int|string|null
      * @throws LanguageException
      */
-    public function id2locale($id)
+    public function id2locale(int $id)
     {
-        if (isset($id)) {
-            $dbResult = $this->db->query('SELECT code FROM languages WHERE languages_id="' . $id . '"');
-
-            return $this->fullLocale($dbResult[0]['code']);
-        }
+        $dbResult = $this->db->query('SELECT code FROM languages WHERE languages_id="' . $id . '"');
+        return $this->fullLocale($dbResult[0]['code']);
     }
 
     /**
-     * @param $string
+     * @param string $string
      * @return false|int|string|null
      * @throws LanguageException
      */
-    public function string2locale($string)
+    public function string2locale(string $string)
     {
-        if (isset($string)) {
-            $dbResult = $this->db->query('SELECT code FROM languages WHERE directory="' . $string . '"');
-
-            return $this->fullLocale($dbResult[0]['code']);
-        }
+        $dbResult = $this->db->query('SELECT code FROM languages WHERE directory="' . $string . '"');
+        return $this->fullLocale($dbResult[0]['code']);
     }
 
     /**
-     * @param $data
-     * @return mixed|string
+     * @param string $data
+     * @return string
      */
-    public function replaceZero($data)
+    public function replaceZero(string $data): string
     {
         return ($data == 0) ? '' : $data;
     }
 
     /**
-     * @return array|bool|\jtl\Connector\Core\Database\multitype|number|null
+     * @return mixed
      */
     public function getCustomerGroups()
     {
@@ -446,20 +435,20 @@ abstract class AbstractBaseMapper extends AbstractBase
     }
 
     /**
-     * @param $id
+     * @param string $id
      * @return Identity
      */
-    public function identity($id)
+    public function identity(string $id): Identity
     {
         return new Identity($id);
     }
 
     /**
-     * @param $name
+     * @param string $name
      * @param string $p_replace
      * @return string|string[]|null
      */
-    public function cleanName($name, $p_replace = '-')
+    public function cleanName(string $name, string $p_replace = '-')
     {
         $search_array = ['ä', 'Ä', 'ö', 'Ö', 'ü', 'Ü', '&auml;', '&Auml;', '&ouml;', '&Ouml;', '&uuml;', '&Uuml;', 'ß', '&szlig;'];
         $replace_array = ['ae', 'Ae', 'oe', 'Oe', 'ue', 'Ue', 'ae', 'Ae', 'oe', 'Oe', 'ue', 'Ue', 'ss', 'ss'];
@@ -472,13 +461,13 @@ abstract class AbstractBaseMapper extends AbstractBase
     }
 
     /**
-     * @param $endpointId
-     * @param $table
-     * @param $imageColumn
-     * @param $whereColumn
-     * @return mixed|string
+     * @param string $endpointId
+     * @param string $table
+     * @param string $imageColumn
+     * @param string $whereColumn
+     * @return string
      */
-    protected function getDefaultColumnImageValue($endpointId, $table, $imageColumn, $whereColumn)
+    protected function getDefaultColumnImageValue(string $endpointId, string $table, string $imageColumn, string $whereColumn): string
     {
         $image = '';
         if (!empty($endpointId)) {

@@ -62,6 +62,4 @@ abstract class AbstractBase
     {
         return sprintf('%s\\Controller', $this->getMainNamespace());
     }
-
-
 }
