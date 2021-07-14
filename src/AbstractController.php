@@ -10,14 +10,13 @@ use jtl\Connector\Core\Model\QueryFilter;
 use jtl\Connector\Core\Rpc\Error;
 use jtl\Connector\Formatter\ExceptionFormatter;
 use jtl\Connector\Model\Statistic;
-use jtl\Connector\Modified\Installer\Config;
 use jtl\Connector\Result\Action;
 
 /**
- * Class AbstractBaseController
+ * Class AbstractController
  * @package Jtl\Connector\XtcComponents
  */
-abstract class AbstractBaseController extends AbstractBase implements IController
+abstract class AbstractController extends AbstractBase implements IController
 {
     /**
      * @var object
@@ -25,12 +24,12 @@ abstract class AbstractBaseController extends AbstractBase implements IControlle
     protected $method;
 
     /**
-     * @var AbstractBaseMapper
+     * @var AbstractMapper
      */
     protected $mapper;
 
     /**
-     * AbstractBaseController constructor.
+     * AbstractController constructor.
      * @param IDatabase $db
      * @param array $shopConfig
      * @param \stdClass $connectorConfig
@@ -52,10 +51,10 @@ abstract class AbstractBaseController extends AbstractBase implements IControlle
 
     /**
      * @param string $controllerName
-     * @return AbstractBaseMapper
+     * @return AbstractMapper
      * @throws \Exception
      */
-    protected function createMapper(string $controllerName): AbstractBaseMapper
+    protected function createMapper(string $controllerName): AbstractMapper
     {
         $class = sprintf('%s\\%s', $this->getMapperNamespace(), $controllerName);
 

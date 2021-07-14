@@ -9,10 +9,10 @@ use jtl\Connector\Model\Identity;
 use jtl\Connector\Core\Utilities\Language;
 
 /**
- * Class AbstractBaseMapper
+ * Class AbstractMapper
  * @package Jtl\Connector\XtcComponents
  */
-abstract class AbstractBaseMapper extends AbstractBase
+abstract class AbstractMapper extends AbstractBase
 {
     /**
      * @var array
@@ -30,7 +30,7 @@ abstract class AbstractBaseMapper extends AbstractBase
     protected $type;
 
     /**
-     * AbstractBaseMapper constructor.
+     * AbstractMapper constructor.
      * @param IDatabase $db
      * @param array $shopConfig
      * @param \stdClass $connectorConfig
