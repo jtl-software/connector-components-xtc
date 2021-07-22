@@ -306,7 +306,7 @@ abstract class AbstractMapper extends AbstractBase
      */
     protected function executeQuery($parentData = null, ?int $limit = null)
     {
-        $limitQuery = is_null($limit) ? ' LIMIT ' . $limit : '';
+        $limitQuery = !is_null($limit) ? ' LIMIT ' . $limit : '';
 
         if (isset($this->mapperConfig['query'])) {
             if (!is_null($parentData)) {
