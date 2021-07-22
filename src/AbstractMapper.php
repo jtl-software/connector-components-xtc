@@ -131,7 +131,7 @@ abstract class AbstractMapper extends AbstractBase
      * @return DataModel
      * @throws \Exception
      */
-    public function generateDbObj(DataModel $model, \stdClass $parentDbObj, DataModel $parentModel = null, $addToParent = false)
+    public function generateDbObj(DataModel $model, \stdClass $parentDbObj = null, DataModel $parentModel = null, $addToParent = false)
     {
         $subMapper = [];
 
