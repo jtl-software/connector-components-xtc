@@ -18,9 +18,9 @@
     "ext-pdo": "*"
   },
   "require-dev": {
-    "friendsofphp/php-cs-fixer": "^2.15",
     "phpunit/phpunit": "^9.1",
-    "phpstan/phpstan": "^0.12.65"
+    "phpstan/phpstan": "^0.12.65",
+    "friendsofphp/php-cs-fixer": "^3.2"
   },
   "autoload": {
     "psr-4": {
