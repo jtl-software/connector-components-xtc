@@ -19,14 +19,15 @@ use jtl\Connector\Result\Action;
 abstract class AbstractController extends AbstractBase implements IController
 {
     /**
+     * @var string
+     */
+    protected $controllerName;
+
+    /**
      * @var object
      */
     protected $method;
 
-    /**
-     * @var AbstractMapper
-     */
-    protected $mapper;
 
     /**
      * AbstractController constructor.
@@ -37,8 +38,8 @@ abstract class AbstractController extends AbstractBase implements IController
      */
     public function __construct(IDatabase $db, array $shopConfig, \stdClass $connectorConfig)
     {
+        $this->controllerName = (new \ReflectionClass($this))->getShortName();
         parent::__construct($db, $shopConfig, $connectorConfig);
-        $this->mapper = $this->createMapper($this->getControllerName());
     }
 
     /**
@@ -46,7 +47,7 @@ abstract class AbstractController extends AbstractBase implements IController
      */
     public function getControllerName(): string
     {
-        return (new \ReflectionClass($this))->getShortName();
+        return $this->controllerName;
     }
 
     /**
@@ -89,9 +90,10 @@ abstract class AbstractController extends AbstractBase implements IController
     {
         $action = new Action();
         $action->setHandled(true);
+        $mapper = $this->createMapper($this->controllerName);
 
         try {
-            $result = $this->mapper->pull(null, $queryFilter->getLimit());
+            $result = $mapper->pull(null, $queryFilter->getLimit());
 
             $action->setResult($result);
         } catch (\Exception $exc) {
@@ -113,11 +115,11 @@ abstract class AbstractController extends AbstractBase implements IController
     public function delete(DataModel $model): Action
     {
         $action = new Action();
-
         $action->setHandled(true);
+        $mapper = $this->createMapper($this->controllerName);
 
         try {
-            $result = $this->mapper->delete($model);
+            $result = $mapper->delete($model);
 
             $action->setResult($result);
         } catch (\Exception $exc) {
@@ -135,15 +137,17 @@ abstract class AbstractController extends AbstractBase implements IController
     /**
      * @param QueryFilter $queryFilter
      * @return Action
+     * @throws \Exception
      */
     public function statistic(QueryFilter $queryFilter): Action
     {
         $action = new Action();
         $action->setHandled(true);
+        $mapper = $this->createMapper($this->controllerName);
 
         try {
             $statModel = new Statistic();
-            $statModel->setAvailable($this->mapper->statistic());
+            $statModel->setAvailable($mapper->statistic());
             $statModel->setControllerName($this->controllerName);
 
             $action->setResult($statModel);
@@ -162,16 +166,16 @@ abstract class AbstractController extends AbstractBase implements IController
     /**
      * @param DataModel $model
      * @return Action
+     * @throws \Exception
      */
     public function push(DataModel $model): Action
     {
         $action = new Action();
-
         $action->setHandled(true);
+        $mapper = $this->createMapper($this->controllerName);
 
         try {
-            $result = $this->mapper->push($model);
-
+            $result = $mapper->push($model);
             $action->setResult($result);
         } catch (\Exception $exc) {
             Logger::write(ExceptionFormatter::format($exc), Logger::WARNING, 'controller');
