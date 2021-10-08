@@ -52,6 +52,16 @@ abstract class AbstractController extends AbstractBase implements IController
 
     /**
      * @param string $controllerName
+     * @return AbstractController
+     */
+    public function setControllerName(string $controllerName): AbstractController
+    {
+        $this->controllerName = $controllerName;
+        return $this;
+    }
+
+    /**
+     * @param string $controllerName
      * @return AbstractMapper
      * @throws \Exception
      */
