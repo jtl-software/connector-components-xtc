@@ -373,11 +373,11 @@ abstract class AbstractMapper extends AbstractBase
     }
 
     /**
-     * @param string $country
-     * @return false|int|string|null
+     * @param string|null $country
+     * @return string|null
      * @throws LanguageException
      */
-    public function fullLocale(string $country)
+    public function fullLocale(string $country): ?string
     {
         return Language::convert($country);
     }
@@ -387,12 +387,12 @@ abstract class AbstractMapper extends AbstractBase
      * @return mixed
      * @throws LanguageException
      */
-    public function locale2id(string $locale)
+    public function locale2id(string $locale): string
     {
         $iso2 = Language::convert(null, $locale);
-        $dbResult = $this->db->query('SELECT languages_id FROM languages WHERE code="' . $iso2 . '"');
+        $dbResult = $this->db->query(sprintf('SELECT languages_id FROM languages WHERE code = "%s"', $iso2));
 
-        return $dbResult[0]['languages_id'];
+        return $dbResult[0]['languages_id'] ?? '';
     }
 
     /**
@@ -400,10 +400,10 @@ abstract class AbstractMapper extends AbstractBase
      * @return false|int|string|null
      * @throws LanguageException
      */
-    public function id2locale(int $id)
+    public function id2locale(int $id): string
     {
-        $dbResult = $this->db->query('SELECT code FROM languages WHERE languages_id="' . $id . '"');
-        return $this->fullLocale($dbResult[0]['code']);
+        $dbResult = $this->db->query(sprintf('SELECT code FROM languages WHERE languages_id = "%d"', $id));
+        return isset($dbResult[0]['code']) ? $this->fullLocale($dbResult[0]['code']) ?? '' : '';
     }
 
     /**
@@ -411,10 +411,10 @@ abstract class AbstractMapper extends AbstractBase
      * @return false|int|string|null
      * @throws LanguageException
      */
-    public function string2locale(string $string)
+    public function string2locale(string $string): string
     {
-        $dbResult = $this->db->query('SELECT code FROM languages WHERE directory="' . $string . '"');
-        return $this->fullLocale($dbResult[0]['code']);
+        $dbResult = $this->db->query(sprintf('SELECT code FROM languages WHERE directory = "%s"', $string));
+        return isset($dbResult[0]['code']) ? $this->fullLocale($dbResult[0]['code']) ?? '' : '';
     }
 
     /**
@@ -423,7 +423,7 @@ abstract class AbstractMapper extends AbstractBase
      */
     public function replaceZero(string $data): string
     {
-        return ($data == 0) ? '' : $data;
+        return ($data === '0') ? '' : $data;
     }
 
     /**
